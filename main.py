@@ -78,7 +78,7 @@ qam64_54 = {
         "RATE": [0, 0, 1, 1],
     }
 
-mod = qam64_54
+mod = bpsk_6
 
 tail = np.zeros(6, dtype=int)
 
@@ -614,15 +614,16 @@ def make_packet(chosen_packet, mod_type, tail, service):
     sdatat = np.hstack((service, chosen_packet, tail))     ## [service chosen packet tail]
     p_data,plen = add_pad(sdatat,mod_type)
     en_data = test_encoder(p_data, mod_type["coding rate"])   ##encoded data
-    # mo_data = modulation(en_data,mod_type)      ##modulated data
-    return en_data,plen
+    mo_data = modulation(en_data,mod_type)      ##modulated data
+    return mo_data,plen
 
 def extract_packet(time_signal, mod_type, len_pad):
-    dec_data = test_decoder(time_signal, mod_type["coding rate"]) 
+    demo_data = demodulation(time_signal, mod_type)
+    dec_data = test_decoder(demo_data, mod_type["coding rate"]) 
     sdatat = delet_pad(dec_data, len_pad)
     data = sdatat[len(service):len(sdatat)-len(tail)]
 
-    # demo_data = demodulation(time_signal, mod_type)
+    
     
     return data
 
@@ -654,3 +655,7 @@ for i in range(len(sourcehat)):
     if sourcehat[i] != source[i]:
         print('false')
 print(len(sourcehat))
+source[0:20]
+
+sourcehat[0:20]
+
