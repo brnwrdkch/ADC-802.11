@@ -2,7 +2,7 @@
 # ####################### Scrambler and Descrambler ############################
  
 #                             Hadis Abolfathi
-#                                 9803134
+#                                
  
 # ##############################################################################
 import numpy as np
@@ -43,7 +43,7 @@ def scrambler (inp_vec, Initial_Vec, header_len, service_len, tail_len):
   out_vec = np.zeros(vec_len,dtype=np.int8)
   
   # Scrambler does not scramble the header and service; therefore, the header and service do not change
-  out_vec[0:header_len] = inp_vec[0:header_len]
+  out_vec[0:header_len+service_len] = inp_vec[0:header_len+service_len]
  
   # We know that SERVICE is 16 bits zero. The first 7 bits to be sent into the Scrambler 
   # are the beginning of the SERVICE parameter. These 7 bits are re-written with the 
