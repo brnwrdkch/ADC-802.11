@@ -1,10 +1,6 @@
 
 # ####################### Scrambler and Descrambler ############################
  
-#                             Hadis Abolfathi
-#                                
- 
-# ##############################################################################
 import numpy as np
  
 # __________________ PARAMETERS _____________________
@@ -124,11 +120,7 @@ else:
 """The following part is the code for the Interleaver and Deinterleaver."""
 
 # #################### interleaver and Deinterleaver ##########################
- 
-#                             Hadis Abolfathi
-#                                 
-  
-# ##############################################################################
+
 import numpy as np
 import math
 
