@@ -1,20 +1,10 @@
 
-# ####################### Scrambler and Descrambler ############################
- 
+# ##############################################################################
 import numpy as np
  
 # __________________ PARAMETERS _____________________
- 
-HEADER_LEN = 4 + 1 + 12 + 1 + 6
-#HEADER_LEN = 5
 TAIL_LEN = 6
- 
-NUM_DATA_BIT_PER_SYMBOL = 24  # for BPSK modulation
-NUM_SYMBOL = 50
 SERVICE_LEN = 16
-#DATA_LEN  = SERVICE_LEN + NUM_SYMBOL*NUM_DATA_BIT_PER_SYMBOL
-DATA_LEN = 1000
- 
 SCRAMBLER_LEN = 7
 # __________________Scrambler Core __________________
  
@@ -34,23 +24,21 @@ def scrambler_core(inp_vec, Initial_Vec):
  
 # __________________Scrambler unit __________________
  
-def scrambler (inp_vec, Initial_Vec, header_len, service_len, tail_len):
+def scrambler (inp_vec, service_len, tail_len):
   vec_len = len(inp_vec)
   out_vec = np.zeros(vec_len,dtype=np.int8)
   
-  # Scrambler does not scramble the header and service; therefore, the header and service do not change
-  out_vec[0:header_len+service_len] = inp_vec[0:header_len+service_len]
+  # Scrambler does not scramble the service; therefore, the service does not change
  
   # We know that SERVICE is 16 bits zero. The first 7 bits to be sent into the Scrambler 
   # are the beginning of the SERVICE parameter. These 7 bits are re-written with the 
   # initial state of the Scrambler so descrambling can be done in the receiver.
-  out_vec[header_len:header_len+7] = Initial_Vec
- 
-  out_vec[header_len+service_len:] = scrambler_core(inp_vec[header_len+service_len:],Initial_Vec)
- 
-  # Scrambler replaces the trailing scrambled zero bits with nonscrambled zero bits
-  # to reset the Convolutional Encoder for the next message
-  out_vec[vec_len-tail_len:] = 0
+
+  Initial_Vec = inp_vec[0:7]
+  out_vec[0:service_len] = inp_vec[0:service_len]
+  out_vec[vec_len-tail_len:] = inp_vec[vec_len-tail_len:]
+
+  out_vec[service_len:vec_len-tail_len] = scrambler_core(inp_vec[service_len:vec_len-tail_len],Initial_Vec)
  
   return out_vec
  
@@ -89,25 +77,22 @@ Initial_Vec = np.random.randint(2, size=SCRAMBLER_LEN)
  
 # Generating the input test vector. Note: The 16 bits of SERVICE all are zero
 Scrambler_Inp_vec = np.random.randint(2, size=DATA_LEN)
-Scrambler_Inp_vec[HEADER_LEN:HEADER_LEN+SERVICE_LEN] = 0
- 
+Scrambler_Inp_vec[0:SERVICE_LEN] = 0
+Scrambler_Inp_vec[0:7] = Initial_Vec
+
 # Scrambler Unit
-Scrambler_Out_vec = scrambler(Scrambler_Inp_vec, Initial_Vec, HEADER_LEN, SERVICE_LEN, TAIL_LEN)
- 
-# Important Notes: The header part is not fed to the descrambler. Therefore, this part
-# is eliminated and other parts are fed to the descrambler. In addition, The TAIL_LEN bits
-# remain in the convolutional encoder. 
- 
+Scrambler_Out_vec = scrambler(Scrambler_Inp_vec,SERVICE_LEN, TAIL_LEN)
+  
 # Descrambler Unit
-Descrambler_Inp_vec = Scrambler_Out_vec[HEADER_LEN:DATA_LEN-TAIL_LEN]
+Descrambler_Inp_vec = Scrambler_Out_vec[0:DATA_LEN-TAIL_LEN]
 Descrambler_Out_vec = descrambler(Descrambler_Inp_vec, SERVICE_LEN)
  
 # We know the output of the descrambler must be equal to the input of the scrambler. In order to evaluate
 # the functionality of these functions, we compare the input of the sracambler with the output of the descrambler
  
 Err = 0
-for i in range(DATA_LEN-HEADER_LEN-SERVICE_LEN-TAIL_LEN):   # for i in range (len(Descrambler_Out_vec))
-   if (Descrambler_Out_vec[i+SERVICE_LEN] != Scrambler_Inp_vec[i+HEADER_LEN+SERVICE_LEN]):
+for i in range(DATA_LEN-SERVICE_LEN-TAIL_LEN):   # for i in range (len(Descrambler_Out_vec))
+   if (Descrambler_Out_vec[i+SERVICE_LEN] != Scrambler_Inp_vec[i+SERVICE_LEN]):
      Err += 1
  
 #print(Descrambler_Out_vec[SERVICE_LEN:])  
@@ -116,7 +101,8 @@ if (Err==0):
   print("Congratulation! Both of the scrambler and descrambler work correctly")
 else:
   print("Scrambler and descrambler don't work correctly")
-
+  
+  
 """The following part is the code for the Interleaver and Deinterleaver."""
 
 # #################### interleaver and Deinterleaver ##########################
