@@ -78,7 +78,7 @@ qam64_54 = {
         "RATE": [0, 0, 1, 1],
     }
 
-mod = bpsk_6
+mod = qpsk_18
 
 tail = np.zeros(6, dtype=int)
 
@@ -192,6 +192,36 @@ def deinterleaver(inp_vec, N_CBPS, N_BPSC):
         outp_vec[N_CBPS*cnt:N_CBPS*(cnt+1)] = deinterleaver_Core(vec, N_CBPS, N_BPSC)
 
     return outp_vec
+
+###  interleaver ###
+
+def interleaver(data,Ncbps,Nbpsc):
+    data = np.reshape(data,(int(len(data)/Ncbps),Ncbps))
+    output = np.array([])
+    for j in range(len(data)):
+        i_data = np.array([])       # interleaved data
+        arranged = np.reshape(data[j],(Nbpsc,48))      # arranged to get interleaved
+        for i in range(48): 
+            i_data = np.append(i_data,arranged[:,i])
+        output = np.append(output,i_data)
+    return output
+
+
+### deinterleaver ###
+
+
+def deinterleaver(data,Ncbps,Nbpsc):
+    data = np.reshape(data,(int(len(data)/Ncbps),Ncbps))
+    output = np.array([])
+    for j in range(len(data)):
+        de_data = np.array([])
+        arranged = np.reshape(data[j], (48,Nbpsc))
+        for i in range(Nbpsc):
+            de_data = np.append(de_data,arranged[:,i])
+        output = np.append(output,de_data)
+    return output
+
+    
 
 
 
@@ -384,31 +414,31 @@ def demQPSK(Data):
     import numpy as np
     import matplotlib.pyplot as plt
     import math
-    b=list(Data.real)
-    print(b)
-    c=list(Data.imag)
-    print(c)
+    b=[value.real for value in Data]
+    
+    c=[value.imag for value in Data]
+    
     modulation=2
     g=len(b)*modulation
     h=list(np.zeros(int(g)))
-    print(h)
+    
     t=0
     for k in  range(len(b)):
-
       
-        if b[k]>=0 and c[k]>=0:  # Decision region 1
-            h[t]=1
-            h[t+1]=1
-        elif b[k]<0 and c[k] >= 0:# Decision region 2
-            h[t]=0 
-            h[t+1]=1
-        elif b[k]<0 and c[k]<0: # Decision region 3
-            h[t]=0
-            h[t+1]=0
-        elif b[k]>0 and c[k]<0: # Decision region 4
-            h[t]=1
-            h[t+1]=0
-        t=t+2 
+      
+      if b[k]>=0 and c[k]>=0:  # Decision region 1
+       h[t]=1
+       h[t+1]=1
+      elif b[k]<=0 and c[k] > 0:# Decision region 2
+       h[t]=0 
+       h[t+1]=1
+      elif b[k]<0 and c[k]<=0: # Decision region 3
+       h[t]=0
+       h[t+1]=0
+      elif b[k]>=0 and c[k]<0: # Decision region 4
+       h[t]=1
+       h[t+1]=0
+      t=t+2 
     return (h)
 
 
@@ -592,7 +622,7 @@ def choose_packet(data,nop,iteration,ndbpp):
         output = complet_packet
     elif iteration==nop-1:
         output = last_paacket
-    return complet_packet
+    return output
 
 
 
@@ -658,4 +688,8 @@ print(len(sourcehat))
 source[0:20]
 
 sourcehat[0:20]
+
+t_signal[0:20]
+
+plt.plot(t_signal[0:100])
 
