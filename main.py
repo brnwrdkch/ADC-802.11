@@ -78,7 +78,7 @@ qam64_54 = {
         "RATE": [0, 0, 1, 1],
     }
 
-mod = bpsk_6
+mod = qam64_54
 
 tail = np.zeros(6, dtype=int)
 
@@ -449,7 +449,7 @@ def demQPSK(Data):
 
 
 # fast 16 QAM Demodulator by Hamed Ghanbari
-def fastdemQAM16(Data):
+def demQAM16(Data):
     import numpy as np
     import matplotlib.pyplot as plt
     import math
@@ -688,6 +688,7 @@ preamble_short = np.hstack([short_withCP,short_withCP])
 
 preamble = np.hstack([preamble_short,preamble_long])
 
+
 def modulation(in_data, modulationtype):         #interleaved data
     if modulationtype == bpsk_6 or modulationtype == bpsk_9:
         modulated_data = bpsk(in_data)
@@ -823,8 +824,13 @@ def choose_packet(data,nop,iteration,ndbpp):
     return output
 
 
-def choose_symbol(data,nos):
-    symbol = data[48*i:48*(1+i)]
+def choose_symbol(data, iteration):
+    symbol = data[48*iteration:48*(1+iteration)]
+    return symbol
+
+
+def choose_recieved_symbol(dat, it):
+    symbol = dat[80*it:80*(it+1)]
     return symbol
 
 def add_pad(data, mod):   ##packet binary data with service and tail
@@ -841,7 +847,7 @@ def delet_pad(p_data, pad_len):   ## data with pad
     data = np.delete(p_data,range(len(p_data)-pad_len,len(p_data)))
     return data
 
-def make_packet(chosen_packet, mod_type, tail, service):
+def make_packet(chosen_packet, mod_type, tail, service,sfft):
     sdatat = np.hstack((service, chosen_packet, tail))     ## [service chosen packet tail]
     p_data,plen = add_pad(sdatat,mod_type)
     en_data = test_encoder(p_data, mod_type["coding rate"])   ##encoded data
@@ -850,14 +856,26 @@ def make_packet(chosen_packet, mod_type, tail, service):
     signal = make_signal(mod_type["RATE"], in_data, mod_type["Ncbps"])
     adde_signal = np.hstack((signal,mo_data))
     nos = int(len(adde_signal)/48)     ##number of symbol per packer
-    time_signal = []
-    for i in range(int(len(adde_signal)/48)):
-        ch_symbol = choose_symbol(adde_signal, nos)
-        all_symbol = 
-    return adde_signal,plen
+    time_signal = np.array([])
+    for i in range(nos):
+        ch_symbol = choose_symbol(adde_signal, i)
+        all_symbol = subcarrier_allocation(ch_symbol)      ## allocated symbol
+        ifft_symbol = ifft_pilot(all_symbol,sfft)
+        add_cp_symbol = add_CP(ifft_symbol)
+        time_signal = np.append(time_signal,add_cp_symbol)
+    time_signal = np.hstack((preamble, time_signal))
+    return time_signal,plen
 
-def extract_packet(time_signal, mod_type, len_pad):
-    mod_rate,packet_len,mo_data = extract_signal(time_signal)
+def extract_packet(t_signal, mod_type, len_pad, sfft):     
+    adde_signal = []
+    t_signal = np.delete(t_signal,range(320))
+    for i in range(int(len(t_signal)/80)):
+        ch_r_symbol = choose_recieved_symbol(t_signal, i)
+        rem_cp_symbol = remove_CP(ch_r_symbol)
+        fft_symbol,pilot_value = fft_pilot(rem_cp_symbol, sfft) 
+        exall_symbol = extract_data(fft_symbol)
+        adde_signal = np.append(adde_signal,exall_symbol)
+    mod_rate,packet_len,mo_data = extract_signal(adde_signal)
     mod_type = find_mod(mod_rate)
     demo_data = demodulation(mo_data, mod_type)
     de_data = deinterleaver_a(demo_data, mod_type["Ncbps"], mod_type["Nbpsc"])
@@ -883,8 +901,8 @@ nop
 sourcehat = []
 for i in range(nop):
     ch_data = choose_packet(source,nop,i,ndbppts)       ## chosen packet   (bit)
-    t_signal,plen = make_packet(ch_data, mod, tail, service)    ## plen :pad length
-    ex_data = extract_packet(t_signal, mod, plen)
+    t_signal,plen = make_packet(ch_data, mod, tail, service, sfft=64)    ## plen :pad length
+    ex_data = extract_packet(t_signal, mod, plen, sfft=64)
     sourcehat = np.append(sourcehat,ex_data) 
     print(len(ch_data))
     print(len(t_signal))
