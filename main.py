@@ -84,7 +84,9 @@ tail = np.zeros(6, dtype=int)
 
 service = np.zeros(16, dtype=int)
 
-s_initialization = np.array([0, 0, 0, 0, 0, 0, 0], dtype=int)          ##  Scrambler Initialization
+s_initialization = np.array([1,1,1,1,1,1,1], dtype=int)          ##  Scrambler Initialization
+
+service[0:7] = [1,1,1,1,1,1,1]
 
 nfft = 64          # fft size
 
@@ -112,6 +114,50 @@ ndbps = mod['Ndbps']          # number of data bit per symbol
 
 ndbppts = ndbpp - len(tail) - len(service)  ##ndbpp -len(tail) -len(service)
 
+
+###scrambler
+
+def scrambler_core(inp_vec, Initial_Vec):
+  vec_len = len(inp_vec)
+  out_vec = np.zeros(vec_len,dtype=np.int8)
+ 
+  scrambler_vec = Initial_Vec; # initializing the scrambler
+ 
+  for i in range(vec_len):
+    temp = np.bitwise_xor(int(scrambler_vec[3]) , int(scrambler_vec[6]))
+    scrambler_vec[1:] = scrambler_vec[0:6]
+    scrambler_vec[0] = temp
+    out_vec[i] = np.bitwise_xor(int(scrambler_vec[0]) , int(inp_vec[i]))
+ 
+  return out_vec
+ 
+# __________________Scrambler unit __________________
+ 
+def scrambler (inp_vec, service_len, tail_len):
+  vec_len = len(inp_vec)
+  out_vec = np.zeros(vec_len,dtype=np.int8)
+  
+  
+  Initial_Vec = inp_vec[0:7]
+  out_vec[0:service_len] = inp_vec[0:service_len]
+  out_vec[vec_len-tail_len:] = inp_vec[vec_len-tail_len:]
+
+  out_vec[service_len:vec_len-tail_len] = scrambler_core(inp_vec[service_len:vec_len-tail_len],Initial_Vec)
+ 
+  return out_vec
+ 
+# __________________Decrambler unit __________________
+ 
+def descrambler (inp_vec, service_len):
+  descrambler_init = inp_vec[0:7]
+ 
+  vec_len = len(inp_vec)
+  out_vec = np.zeros(vec_len,dtype=np.int8)
+  out_vec[0:service_len] = inp_vec[0:service_len]
+  out_vec[service_len:] = scrambler_core(inp_vec[service_len:],descrambler_init)
+  return out_vec
+ 
+ 
 
 
 ## encoder for test
@@ -850,7 +896,8 @@ def delet_pad(p_data, pad_len):   ## data with pad
 def make_packet(chosen_packet, mod_type, tail, service,sfft):
     sdatat = np.hstack((service, chosen_packet, tail))     ## [service chosen packet tail]
     p_data,plen = add_pad(sdatat,mod_type)
-    en_data = test_encoder(p_data, mod_type["coding rate"])   ##encoded data
+    s_data = scrambler(p_data,16,6)
+    en_data = test_encoder(s_data, mod_type["coding rate"])   ##encoded data
     in_data = interleaver_a(en_data, mod_type["Ncbps"], mod_type["Nbpsc"])     ##interleaved data
     mo_data = modulation(in_data,mod_type)      ##modulated data
     signal = make_signal(mod_type["RATE"], in_data, mod_type["Ncbps"])
@@ -880,23 +927,15 @@ def extract_packet(t_signal, mod_type, len_pad, sfft):
     demo_data = demodulation(mo_data, mod_type)
     de_data = deinterleaver_a(demo_data, mod_type["Ncbps"], mod_type["Nbpsc"])
     dec_data = test_decoder(de_data, mod_type["coding rate"]) 
-    sdatat = delet_pad(dec_data, len_pad)
+    des_data = descrambler(dec_data,16)
+    sdatat = delet_pad(des_data, len_pad)
     data = sdatat[len(service):len(sdatat)-len(tail)]
 
-    
-    
     return data
 
 
-source = np.random.randint(0, high=2, size=100000)
-# source = np.hstack((source,tail))   #added tail source
-# pad = np.zeros((len(source)-((nop-1)*ndbppts))%ndbps, dtype=int)
-# source = np.hstack((tsource,pad))
-# print(len(psource))
-
-# psourcehat = []
+source = np.random.randint(0, high=2, size=100000, dtype=int)
 nop = math.ceil(len(source)/(ndbppts))          # number of packets
-nop
 
 sourcehat = []
 for i in range(nop):
@@ -904,19 +943,15 @@ for i in range(nop):
     t_signal,plen = make_packet(ch_data, mod, tail, service, sfft=64)    ## plen :pad length
     ex_data = extract_packet(t_signal, mod, plen, sfft=64)
     sourcehat = np.append(sourcehat,ex_data) 
-    print(len(ch_data))
-    print(len(t_signal))
-    print(len(ex_data))
-    print(len(sourcehat))
-    print(plen)
+    
 
 
-
+num_of_error = 0
 for i in range(len(sourcehat)):
     if sourcehat[i] != source[i]:
-        print('false')
-print(len(sourcehat))
-source[0:20]
+        num_of_error +=1
 
 
-sourcehat[0:20]
+print(f'number of error is: {num_of_error}')
+BER = num_of_error/len(sourcehat)
+print(f'the BER is: {BER}')
