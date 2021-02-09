@@ -1,5 +1,4 @@
 
-
 ## Modules
 
 
@@ -79,6 +78,7 @@ qam64_54 = {
     }
 
 mod = qam64_54
+snr = 15
 
 tail = np.zeros(6, dtype=int)
 
@@ -709,10 +709,7 @@ def remove_CP(OFDM_RX):
 def IFFT(signal):
     return np.fft.ifft(signal)
 
-def add_CP(signal):
-    CP = 16
-    cp = signal[-CP:]
-    return np.hstack([cp,signal])
+
 
 ############################################# Long_preamble ##################################################
 
@@ -824,6 +821,28 @@ def make_signal(mod_rate, in_data, Ncbps):     ## in_data:interleaved data
     int_signal = interleaver_a(en_signal, 48, 1)    # interleaved signal mod:bpsk_6
     mo_signal = modulation(int_signal, bpsk_6)
     return mo_signal
+
+
+##awgn channel
+def awgn(Data,snr):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import math
+    squared_numbers =  [abs(x) for x in Data]
+    n=len(squared_numbers)
+    f= sum(squared_numbers) / n# averaging of signal power
+    z = np.random.normal(loc=0, scale=np.sqrt(2)/2, size=(n,2)).view(np.complex128) # random noise generating 
+    y1 =list(z) 
+    
+    a=math.sqrt((10**( snr/10 ))/f)
+    multiplied_list = [element * a for element in Data]
+    h=list(np.zeros(n))
+    for i in range(n):
+              h[i]=multiplied_list[i] + y1[i]
+    return h
+
+
+
 
 ## extract data
 
@@ -941,7 +960,8 @@ sourcehat = []
 for i in range(nop):
     ch_data = choose_packet(source,nop,i,ndbppts)       ## chosen packet   (bit)
     t_signal,plen = make_packet(ch_data, mod, tail, service, sfft=64)    ## plen :pad length
-    ex_data = extract_packet(t_signal, mod, plen, sfft=64)
+    a_ch_signal = awgn(t_signal,snr)
+    ex_data = extract_packet(a_ch_signal, mod, plen, sfft=64)
     sourcehat = np.append(sourcehat,ex_data) 
     
 
@@ -951,7 +971,8 @@ for i in range(len(sourcehat)):
     if sourcehat[i] != source[i]:
         num_of_error +=1
 
-
+print(f'len of sourcehat: {len(sourcehat)}')
 print(f'number of error is: {num_of_error}')
 BER = num_of_error/len(sourcehat)
 print(f'the BER is: {BER}')
+
