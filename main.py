@@ -23,7 +23,12 @@ extract packet : take each packet and try to detect the transmitted bits
 """
 for i in range(nop):
     ch_data = choose_packet(source,nop,i,ndbppts)       
-    t_signal,plen = make_packet(ch_data, mod, tail, service, sfft=64)    
+    t_signal,plen = make_packet(ch_data, mod, tail, service, sfft=64)   
     a_ch_signal = awgn(t_signal,snr)
     ex_data = extract_packet(a_ch_signal, mod, plen, sfft=64)
     sourcehat = np.append(sourcehat,ex_data) 
+
+
+"""test"""
+for i in range(5):
+    print(i)
