@@ -1,7 +1,3 @@
-" Hadis Abolfathi "
-
-###scrambler
-
 def scrambler_core(inp_vec, Initial_Vec):
   vec_len = len(inp_vec)
   out_vec = np.zeros(vec_len,dtype=np.int8)
