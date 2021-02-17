@@ -135,3 +135,156 @@ def pad2service(pad_length):                    # add legth(binary) of pad to se
 def delet_pad(p_data, pad_len):                   # p_data :data with pad 
     data = np.delete(p_data,range(len(p_data)-pad_len,len(p_data)))
     return data
+
+
+def add_silence(data,st):                #add silence time before the transmitted packet 
+    if synch_type == 'defined':          # if 'synch_type : corr' silence time is random 
+        silence = np.zeros(st)           # if 'synch_type : defined' silence time is defined 
+    elif synch_type == 'corr':
+        st = np.random.randint(100,high=st,size=1)
+        silence = np.zeros(st)
+    return np.hstack((silence,data))
+
+
+
+
+def synch(data):                          # if 'synch_type : corr' then uses correlation for synchronization
+    if synch_type == 'defined':
+        time_signal = np.delete(data, range(st))
+    elif synch_type == 'corr':
+        start_time = Correlation(data)
+        time_signal = np.delete(data,range(start_time))
+    return time_signal
+
+
+def rec_pad_len(data):                           #detect number of bits added as pad
+    pad_len = data[7:16]
+    pad_len = int("".join(str(i) for i in pad_len),2)
+    return pad_len
+
+
+def equa_fa(long_preamble_freq,data):            # return a equalization  factor 
+    if use_eq == 'on':                           #if 'use_eq : on' then uses equalizer 
+        l_preamble = data[256:320]
+        l_preamble = np.fft.fft(l_preamble)
+        factor = l_preamble/long_preamble_freq
+    else:
+        factor = np.full(64,1)
+    return factor
+
+def make_packet(chosen_packet, mod_type, tail, service,sfft):
+    
+    " add service and tail "
+    sdatat = np.hstack((service, chosen_packet, tail))    
+    
+    " add pad "
+    p_data,plen = add_pad(sdatat,mod_type)
+    
+    " add length of pad to service"
+    service = pad2service(plen)
+    p_data[0:16] = service
+    
+    "scrambling data"
+    s_data = scrambler(p_data,16,6)
+    
+    "encoding data"
+    en_data = test_encoder(s_data, mod_type["coding rate"])  
+    
+    " interleaving "
+    in_data = interleaver_a(en_data, mod_type["Ncbps"], mod_type["Nbpsc"])     
+    
+    " modulation "
+    mo_data = modulation(in_data,mod_type)     
+    
+    " make SIGNAL symbol "
+    signal = make_signal(mod_type["RATE"], in_data, mod_type["Ncbps"])
+    
+    " add SIGNAL to the begining of the packet "
+    adde_signal = np.hstack((signal,mo_data))
+    
+    " Calcualte number of OFDM symbol per packet "
+    nos = int(len(adde_signal)/48) 
+    
+    """ 
+    loop:
+    choose_symbol: choose modulated symbols for each OFDM symbol
+
+    """
+    time_signal = np.array([])
+    for i in range(nos):
+        ch_symbol = choose_symbol(adde_signal, i)
+        
+        all_symbol = subcarrier_allocation(ch_symbol)     
+        
+        ifft_symbol = ifft_pilot(all_symbol,sfft)
+        
+        add_cp_symbol = add_CP(ifft_symbol)
+        
+        time_signal = np.append(time_signal,add_cp_symbol)
+    
+    " add preamble to the begining of the packet "
+    time_signal = np.hstack((preamble, time_signal))
+    
+    "add silence time befor each packet"
+    time_signal = add_silence(time_signal,st)
+   
+    return time_signal
+
+def extract_packet(t_signal, mod_type, sfft):     
+    
+    " estimate begining of the packet "
+    t_signal = synch(t_signal)
+    
+    " return a equalization  factor "
+    factor = equa_fa(long,t_signal)
+    
+    " delet preamble "
+    t_signal = np.delete(t_signal,range(320))
+    
+    " extract packet length and transmitted rate "
+    pack_len,mod_rate = extract_signal(t_signal,factor)    
+    
+    
+    """
+     loop:
+     choose recieved symbol from each packet to get detected
+    """
+    adde_signal = []
+    for i in range(pack_len+1):
+        
+        ch_r_symbol = choose_recieved_symbol(t_signal, i)
+        
+        rem_cp_symbol = remove_CP(ch_r_symbol)
+        
+        fft_symbol,pilot_value = fft_pilot(rem_cp_symbol, sfft, factor) 
+        
+        exall_symbol = extract_data(fft_symbol)
+        
+        adde_signal = np.append(adde_signal,exall_symbol)
+        
+
+    " detect modulation type from detected rate "
+    mod_type = find_mod(mod_rate)
+    
+    " demodulation of symbols per packet"
+    demo_data = demodulation(adde_signal[48:], mod_type, 'data')
+    
+    " deinterleaving "
+    de_data = deinterleaver_a(demo_data, mod_type["Ncbps"], mod_type["Nbpsc"])
+    
+    " decoding "
+    dec_data = test_decoder(de_data, mod_type["coding rate"]) 
+    
+    " descrambling "
+    des_data = descrambler(dec_data,16)
+    
+    " detect length of added pad "
+    pad_len = rec_pad_len(des_data)
+    
+    " remove pad"
+    sdatat = delet_pad(des_data, pad_len)
+    
+    " remove tail and service and return transmited data bits of each packet "
+    data = sdatat[len(service):len(sdatat)-len(tail)]
+    
+    return data
