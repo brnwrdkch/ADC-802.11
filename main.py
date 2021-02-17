@@ -127,8 +127,9 @@ ndbps = mod['Ndbps']          # number of data bit per symbol
 
 ndbppts = ndbpp - len(tail) - len(service)  ##ndbpp -len(tail) -len(service)
 
+long = np.array([0,1,-1,-1,1,1,-1,1,-1,1,-1,-1,-1,-1,-1,1,1,-1,-1,1,-1,1,-1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,-1,-1,1,1,-1,1,-1,1,1,1,1,1,1,-1,-1,1,1,-1,1,-1,1,1,1,1])
 
-
+preamble = preamble()
 "_____________________________________________________START_________________________________________________ "
 
 "Generating data"
