@@ -27,3 +27,16 @@ def demodulation(mo_data, modulationtype, datatype):         #demodulation based
         pass
     return demodulated_data
 
+def make_signal(mod_rate, in_data, Ncbps):     # get interleaved data and generate signal's modulated symbol 
+    noos = int(len(in_data)/Ncbps)             # number if ofdm symbol per packet "
+    bi_noos = bin(noos)      
+    bi_noos = bi_noos.split('b')
+    bi_noos = [int(x) for x in bi_noos[1]]
+    bi_noos = np.array(bi_noos)
+    signal = SIGNAL(mod_rate, bi_noos)     # generate signal 
+    en_signal = test_encoder(signal,1/2)    # encoding signal 
+    int_signal = interleaver_a(en_signal, 48, 1)    # interleaving signal 
+    mo_signal = modulation(int_signal, bpsk_6)       # modulate signal's bits
+    
+    return mo_signal
+
