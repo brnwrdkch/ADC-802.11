@@ -1,7 +1,3 @@
-" Hamed Qanbari " 
-
-## modulator
-
 def bpsk(Data):
     import numpy as np
     import matplotlib.pyplot as plt
@@ -38,7 +34,7 @@ def QPSK(Data):
     for k in  range(int(g)):
         s =y[int(t):int(t+2)]
         tpl = tuple(s)#  Original Data to tuple
-        h[k]=mapping.get(tpl)
+        h[k]=(mapping.get(tpl))*(1/math.sqrt(2))
         t=t+2
      
     
@@ -78,7 +74,7 @@ def QAM16(Data):
     for k in  range(int(g)):
         s =y[int(t):int(t+4)]
         tpl = tuple(s)#  Original Data to tuple
-        h[k]=mapping.get(tpl)
+        h[k]=mapping.get(tpl)*(1/math.sqrt(10))
         t=t+4
 
     return h
@@ -164,7 +160,7 @@ def QAM64(Data):
        for k in  range(int(g)):
          s =y[int(t):int(t+6)]
          tpl = tuple(s)#  Original Data to tuple
-         h[k]=mapping.get(tpl)
+         h[k]=mapping.get(tpl)*(1/math.sqrt(42))
          t=t+6
       
        return h
@@ -186,17 +182,25 @@ def dembpsk(Data):
         elif y[k]< 0:
             h[k]=0
         
-    return h
+    return h,Data
 
 
 def demQPSK(Data):
     import numpy as np
     import matplotlib.pyplot as plt
     import math
-    b=[value.real for value in Data]
+    # b=[(value.real) for value in Data]
     
-    c=[value.imag for value in Data]
-    
+    # c=[(value.imag) for value in Data]
+    b=list(np.zeros(len(Data)))
+    c=list(np.zeros(len(Data)))
+    z=np.zeros(len(Data),dtype=complex)
+    for i in range(len(Data)):
+        b[i] = (Data[i].real)*math.sqrt(2)
+        c[i] = (Data[i].imag)*math.sqrt(2) 
+        z[i] = b[i]+c[i]*1j 
+    # plt.plot([x.real for x in z], [x.imag for x in z], 'b.')
+    # plt.axis('equal')
     modulation=2
     g=len(b)*modulation
     h=list(np.zeros(int(g)))
@@ -218,7 +222,7 @@ def demQPSK(Data):
        h[t]=1
        h[t+1]=0
       t=t+2 
-    return (h)
+    return (h),z
 
 
 
@@ -247,7 +251,12 @@ def demQAM16(Data):
               }
     ###############################
     ss=len(Data)
+    factor = np.full(shape=len(Data),fill_value=math.sqrt(10),dtype=complex)
+    Data = np.prod([factor,Data],axis=0)
+    # plt.plot([x.real for x in Data], [x.imag for x in Data], 'b.')
+    # plt.axis('equal')
     Data1 =np.array(Data)
+    
    ## h=[]# Zero vector
     ##for t in range(4*ss):
         ## h.append(0)
@@ -266,7 +275,8 @@ def demQAM16(Data):
         po=np.absolute(values_list - Data1[k])
         min_value = np.argmin(po)
         h.extend(y1[min_value])
-    return h
+   
+    return h,Data
 
 
 
@@ -343,6 +353,10 @@ def demQAM64(Data):
               }
     ###############################
     ss=len(Data)
+    factor = np.full(shape=len(Data),fill_value=math.sqrt(42),dtype=complex)
+    Data = np.prod([factor,Data],axis=0)
+    # plt.plot([x.real for x in Data], [x.imag for x in Data], 'b.')
+    # plt.axis('equal')
     Data1 =np.array(Data)
    ### h=[]# Zero vector
    ### for t in range(4*ss):
@@ -360,5 +374,5 @@ def demQAM64(Data):
     for k in range(ss):
           po= np.absolute(values_list-Data1[k]) 
           min_value = np.argmin(po)
-          h.extend(y1[min_value])
-    return h
+          h.extend((y1[min_value]))
+    return h,Data
