@@ -1,6 +1,3 @@
-" Hamed Qanbari "
-
-
 def SIGNAL(o,b):
      import numpy as np
      import matplotlib.pyplot as plt
