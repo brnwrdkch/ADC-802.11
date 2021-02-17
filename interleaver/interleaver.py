@@ -1,5 +1,3 @@
-" Hadis Abolfathi "
-## interleaver 
 def interleaver_Core(inp_vec, N_CBPS, N_BPSC):
   s = max(N_BPSC/2,1)
 
