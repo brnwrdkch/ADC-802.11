@@ -1,3 +1,5 @@
+###______Omid Abasi___9912344________###
+
 def modulation(in_data, modulationtype):            
     if modulationtype == bpsk_6 or modulationtype == bpsk_9:
         modulated_data = bpsk(in_data)
