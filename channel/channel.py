@@ -1,3 +1,4 @@
+###______Omid Abasi___9912344________###
 def awgn(Data,SNR):           # awgn channel, SNR(db)
    SNR = 10**(SNR/10)          
    len_data = len(Data)
@@ -12,6 +13,7 @@ def awgn(Data,SNR):           # awgn channel, SNR(db)
    return noisy_data
    
    
+   ### hamed ghanbari
    def simple_fading(fading,Data):
     # Data is the output of IFFT in TX
     # fading=[1 ,.025, .075]
