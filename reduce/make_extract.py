@@ -174,7 +174,7 @@ def equa_fa(long_preamble_freq,data):            # return a equalization  factor
         factor = np.full(64,1)
     return factor
 
-def make_packet(chosen_packet, mod_type, tail, service,sfft):
+def make_packet(chosen_packet, mod_type, tail, service,sfft):      ## gives bits for one packet & creat a time domain packet 
     
     " add service and tail "
     sdatat = np.hstack((service, chosen_packet, tail))    
@@ -232,7 +232,7 @@ def make_packet(chosen_packet, mod_type, tail, service,sfft):
    
     return time_signal
 
-def extract_packet(t_signal, mod_type, sfft):     
+def extract_packet(t_signal, mod_type, sfft):          ## give time domain packet and after using correlation, determine exact index of the preambles, then returns transmitted bits
     
     " estimate begining of the packet "
     t_signal = synch(t_signal)
